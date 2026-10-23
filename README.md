@@ -1,6 +1,6 @@
-# ReelSave — Instagram Video Downloader
+# ReelSave — Instagram & YouTube Video Downloader
 
-A responsive downloader for public Instagram Reels and posts using FastAPI and yt-dlp.
+FastAPI + yt-dlp website supporting public Instagram posts and Reels, YouTube watch links, Shorts and youtu.be links.
 
 ## Run locally
 
@@ -11,17 +11,12 @@ docker run --rm -p 8000:8000 reelsave
 
 Open http://localhost:8000.
 
-## Deploy on Render
+## Render deployment
 
-1. Create a **New Web Service** from this GitHub repository.
-2. Select **Docker** runtime and **Free** instance type.
-3. Use `./Dockerfile` and health check path `/health`.
-4. Deploy. Render supplies a public HTTPS URL.
+The existing Render service auto-deploys from `main`. Dockerfile builds the app; `/health` returns `{"status":"ok"}`.
 
-Alternatively use the included `render.yaml` as a Render Blueprint.
+## Limitations
 
-## Operational limitations
+YouTube and Instagram may block cloud IPs, require sign-in or enforce other restrictions. Some videos will fail. Maximum file size is 150 MB. The downloader chooses a single progressive format, prioritizing MP4 up to 720p where available; resolution or audio availability depends on the provider. This app does not bypass private content restrictions, DRM or authentication. Downloads temporarily use local disk and per-process concurrency and rate limiting; timeout does not cancel a running thread. Consider worker isolation, stricter traffic limits and bandwidth controls before broad public promotion.
 
-Instagram can block data-center IPs or require authentication, so some downloads will fail. This app does not bypass private-account restrictions. Limit usage and monitor hosting bandwidth. Temporary downloads are deleted after response completion. Rate limiting and concurrency controls are per process. The 90-second timeout does not terminate a blocked worker thread. For higher traffic, use isolated jobs and edge rate limiting.
-
-Only download videos you own or have permission to save. Not affiliated with Instagram or Meta.
+Only download content you own or have permission to save. Not affiliated with Instagram, Meta, YouTube or Google.
