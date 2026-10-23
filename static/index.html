@@ -12,7 +12,7 @@ h1 span{background:linear-gradient(90deg,#ff70a6,#ffb668);color:transparent;back
 p{color:#bcb2c7;font-size:17px;line-height:1.6}
 .panel{margin:35px auto;background:#211a2e;border:1px solid #51405c;border-radius:20px;padding:20px;box-shadow:0 18px 60px #0005}
 form{display:flex;gap:10px}input{flex:1;min-width:0;padding:18px;background:#120e1b;border:1px solid #66536b;color:white;border-radius:12px;font-size:15px}
-button{padding:18px 25px;border:0;border-radius:12px;color:white;font-weight:750;background:linear-gradient(90deg,#ec4b93,#fb9460);cursor:pointer}button:disabled{opacity:.6}
+button{padding:18px 25px;border:0;border-radius:12px;color:white;font-weight:750;background:linear-gradient(90deg,#ec4b93,#fb9460);cursor:pointer}button:disabled{opacity:.6}input[aria-invalid="true"]{border-color:#ff7b91;outline:2px solid #ff7b9133}#status.error{color:#ff91a4}#status.success{color:#a6e8bf}#status.info{color:#f0c6d9}
 #status{min-height:28px;margin-top:12px;color:#f0c6d9;font-size:14px}
 .features{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:60px}
 .feature{padding:22px 10px;border:1px solid #ffffff19;background:#ffffff08;border-radius:16px}
@@ -23,19 +23,47 @@ footer{text-align:center;padding:65px 20px 25px;color:#8d8299;font-size:12px}
 <main><div class="pill">Instagram · YouTube · Shorts</div>
 <h1>Save your favorite videos <span>in seconds.</span></h1>
 <p>Paste a public Instagram Reel, YouTube video, or Shorts link to download it to your device.</p>
-<section class="panel"><form id="form"><input id="url" type="url" required placeholder="Paste an Instagram or YouTube URL…" aria-label="Video URL"><button id="btn">Download ↓</button></form><div id="status" role="status" aria-live="polite"></div></section>
+<section class="panel"><form id="form"><input id="url" type="url" required placeholder="Paste an Instagram or YouTube URL…" aria-label="Video URL"><button id="btn">Download ↓</button></form><div id="status" role="status" aria-live="polite" aria-atomic="true"></div></section>
 <div class="features"><div class="feature">⚡<strong>Simple</strong><small>Paste a link to start</small></div><div class="feature">🎬<strong>Videos & Shorts</strong><small>Instagram and YouTube</small></div><div class="feature">🔒<strong>No login</strong><small>No account password requested</small></div></div>
 </main><footer>Only download content you own or have permission to save. Not affiliated with Instagram, YouTube, Google or Meta.</footer>
 <script>
 const form=document.querySelector("#form"),input=document.querySelector("#url"),status=document.querySelector("#status"),btn=document.querySelector("#btn");
+function message(text,type="error"){status.textContent=text;status.className=type;input.setAttribute("aria-invalid",type==="error"?"true":"false");}
+function validate(raw){
+ if(!raw)return "Paste an Instagram or YouTube video link.";
+ let u;try{u=new URL(raw);}catch{return "Enter a valid URL starting with https://";}
+ if(u.protocol!=="https:"||u.username||u.password||u.port)return "Use an HTTPS Instagram or YouTube link.";
+ const host=u.hostname.toLowerCase(),path=u.pathname;
+ if(["instagram.com","www.instagram.com"].includes(host)){
+   if(!/^\/(reel|reels|p|tv)\/[A-Za-z0-9_-]+\/?$/.test(path))return "Instagram links must point to a Reel or video post.";
+   return "";
+ }
+ if(["youtube.com","www.youtube.com","m.youtube.com"].includes(host)){
+   const id=path==="/watch"?u.searchParams.get("v"):(path.match(/^\/(?:shorts|live|embed)\/([A-Za-z0-9_-]{11})\/?$/)||[])[1];
+   return /^[A-Za-z0-9_-]{11}$/.test(id||"")?"":"YouTube links must point to a video or Short, not a channel or playlist.";
+ }
+ if(["youtu.be","www.youtu.be"].includes(host))return /^\/[A-Za-z0-9_-]{11}\/?$/.test(path)?"":"Invalid shortened YouTube video link.";
+ return "Unsupported website. Only Instagram and YouTube video links are supported.";
+}
+input.addEventListener("input",()=>{if(status.className==="error"){const error=validate(input.value.trim());if(error){message(error);}else{message("Link looks valid. Ready to download.","success");}}else if(status.textContent){status.textContent="";status.className="";input.removeAttribute("aria-invalid");}});
+input.addEventListener("paste",()=>queueMicrotask(()=>{const error=validate(input.value.trim());if(error)message(error);else message("Link looks valid. Ready to download.","success");}));
 form.addEventListener("submit",async e=>{
-e.preventDefault();btn.disabled=true;btn.textContent="Downloading…";status.textContent="Retrieving video. Please wait.";
-try{
-const res=await fetch("/api/download",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:input.value.trim()})});
-if(!res.ok){const error=await res.json().catch(()=>({detail:"Download failed"}));throw Error(typeof error.detail==="string"?error.detail:"Download failed");}
-const blob=await res.blob(),url=URL.createObjectURL(blob),a=document.createElement("a");
-a.href=url;a.download=(res.headers.get("content-disposition")?.match(/filename="?([^";]+)/)?.[1])||"video.mp4";
-document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);status.textContent="Download ready!";
-}catch(err){status.textContent=err.message;}finally{btn.disabled=false;btn.textContent="Download ↓";}
+ e.preventDefault();const value=input.value.trim(),error=validate(value);if(error){message(error);return;}
+ btn.disabled=true;btn.textContent="Downloading…";message("Retrieving video. This may take a minute.","info");
+ try{
+  const res=await fetch("/api/download",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:value})});
+  if(!res.ok){const data=await res.json().catch(()=>({}));let detail=typeof data.detail==="string"?data.detail:"Download failed.";
+   if(res.status===429)detail="Too many requests. Please wait and try again.";
+   else if(res.status===503)detail="Server is busy. Try again shortly.";
+   else if(res.status>=500)detail="Server error. Please try again later.";
+   throw Error(detail);
+  }
+  const blob=await res.blob();if(!blob.size)throw Error("The downloaded video was empty.");
+  const objectUrl=URL.createObjectURL(blob),a=document.createElement("a");
+  a.href=objectUrl;a.download=(res.headers.get("content-disposition")?.match(/filename="?([^";]+)/)?.[1])||"video.mp4";
+  document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(objectUrl),60000);
+  message("Video download started.","success");
+ }catch(err){message(err instanceof TypeError?"Network error. Check your connection and try again.":err.message);}
+ finally{btn.disabled=false;btn.textContent="Download ↓";}
 });
 </script></body></html>
