@@ -67,6 +67,8 @@ def fetch(url: str, folder: str) -> Path:
         "quiet": True,
         "no_warnings": True,
         "restrictfilenames": True,
+        # Try alternate YouTube player clients before considering authentication.
+        "extractor_args": {"youtube": {"player_client": ["android", "web"]}},
     }
     with yt_dlp.YoutubeDL(opts) as ydl:
         ydl.download([url])
