@@ -14,12 +14,18 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 from starlette.background import BackgroundTask
 
+from browser_probe import run_probe
+
 app = FastAPI(title="ReelSave", docs_url=None, redoc_url=None)
 limiter = Limiter(key_func=get_remote_address, default_limits=["30/hour"])
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 semaphore = asyncio.Semaphore(2)
+
+@app.on_event("startup")
+async def probe_youtube_on_startup():
+    asyncio.create_task(run_probe())
 MAX_BYTES = 150 * 1024 * 1024
 
 class DownloadRequest(BaseModel):
