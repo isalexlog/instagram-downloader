@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: instagram-downloader
+    runtime: docker
+    plan: free
+    healthCheckPath: /health
+    autoDeployTrigger: commit
