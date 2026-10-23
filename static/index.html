@@ -1,8 +1,6 @@
 <!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ReelSave — Instagram Video Downloader</title>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ReelSave — Instagram & YouTube Downloader</title>
 <style>
 :root{font-family:Inter,system-ui,sans-serif;color:#f7f2fb;background:#100c19}*{box-sizing:border-box}
 body{margin:0;min-height:100vh;background:radial-gradient(ellipse at top,#352045,#100c19 70%)}
@@ -21,15 +19,13 @@ button{padding:18px 25px;border:0;border-radius:12px;color:white;font-weight:750
 .feature strong{display:block;margin:10px 0}.feature small{color:#bcb2c7}
 footer{text-align:center;padding:65px 20px 25px;color:#8d8299;font-size:12px}
 @media(max-width:600px){main{margin-top:5vh}form{flex-direction:column}.features{grid-template-columns:1fr;margin-top:35px}}
-</style>
-</head>
-<body><header>◉ ReelSave</header>
-<main><div class="pill">Simple · Fast · Public videos</div>
-<h1>Save Instagram videos <span>in seconds.</span></h1>
-<p>Paste a public Instagram Reel or post link and save the video to your device.</p>
-<section class="panel"><form id="form"><input id="url" type="url" required placeholder="https://www.instagram.com/reel/..." aria-label="Instagram URL"><button id="btn">Download ↓</button></form><div id="status" role="status" aria-live="polite"></div></section>
-<div class="features"><div class="feature">⚡<strong>Simple</strong><small>Paste a link to start</small></div><div class="feature">🎬<strong>Reels & posts</strong><small>Public Instagram videos</small></div><div class="feature">🔒<strong>No login</strong><small>No Instagram password requested</small></div></div>
-</main><footer>Download only content you own or have permission to save. Not affiliated with Instagram or Meta.</footer>
+</style></head><body><header>◉ ReelSave</header>
+<main><div class="pill">Instagram · YouTube · Shorts</div>
+<h1>Save your favorite videos <span>in seconds.</span></h1>
+<p>Paste a public Instagram Reel, YouTube video, or Shorts link to download it to your device.</p>
+<section class="panel"><form id="form"><input id="url" type="url" required placeholder="Paste an Instagram or YouTube URL…" aria-label="Video URL"><button id="btn">Download ↓</button></form><div id="status" role="status" aria-live="polite"></div></section>
+<div class="features"><div class="feature">⚡<strong>Simple</strong><small>Paste a link to start</small></div><div class="feature">🎬<strong>Videos & Shorts</strong><small>Instagram and YouTube</small></div><div class="feature">🔒<strong>No login</strong><small>No account password requested</small></div></div>
+</main><footer>Only download content you own or have permission to save. Not affiliated with Instagram, YouTube, Google or Meta.</footer>
 <script>
 const form=document.querySelector("#form"),input=document.querySelector("#url"),status=document.querySelector("#status"),btn=document.querySelector("#btn");
 form.addEventListener("submit",async e=>{
@@ -38,7 +34,7 @@ try{
 const res=await fetch("/api/download",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({url:input.value.trim()})});
 if(!res.ok){const error=await res.json().catch(()=>({detail:"Download failed"}));throw Error(typeof error.detail==="string"?error.detail:"Download failed");}
 const blob=await res.blob(),url=URL.createObjectURL(blob),a=document.createElement("a");
-a.href=url;a.download=(res.headers.get("content-disposition")?.match(/filename="?([^";]+)/)?.[1])||"instagram-video.mp4";
+a.href=url;a.download=(res.headers.get("content-disposition")?.match(/filename="?([^";]+)/)?.[1])||"video.mp4";
 document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);status.textContent="Download ready!";
 }catch(err){status.textContent=err.message;}finally{btn.disabled=false;btn.textContent="Download ↓";}
 });
